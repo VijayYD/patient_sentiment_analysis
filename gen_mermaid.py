@@ -6,7 +6,6 @@ from google.genai import Client, types
 # You need to set your API key as an environment variable
 # or replace os.getenv("GEMINI_API_KEY") with your actual API key string.
 # NEVER hardcode your API key in production code!
-os.environ["GEMINI_API_KEY"] = "AIzaSyC6wjp4A7lNky9I85DdKQad_LnX2a4UHpM"
 API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not API_KEY:
