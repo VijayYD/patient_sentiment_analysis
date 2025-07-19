@@ -1,0 +1,236 @@
+sequenceDiagram
+    participant U as User
+    participant WB as Web Browser
+    participant WS as Web Server
+    participant AL as Application Layer
+    participant DB as Database
+    participant EBS as External Bank System
+
+    U->>WB: Enters Login Credentials
+    WB->>WS: POST /login
+    WS->>AL: Validate Credentials
+    AL->>DB: Query User Details
+    DB-->>AL: User Details
+    AL-->>WS: Login Success
+    WS-->>WB: Redirect to Dashboard
+    WB->>U: Displays Dashboard
+
+    U->>WB: Clicks "Fund Transfer"
+    WB->>WS: GET /transfer
+    WS->>AL: Prepare Transfer Page
+    AL->>DB: Fetch User Accounts
+    DB-->>AL: User Accounts
+    AL-->>WS: Transfer Page Data
+    WS-->>WB: Send Transfer Page
+    WB->>U: Displays Fund Transfer Form
+
+    U->>WB: Enters Transfer Details (Recipient, Amount, etc.)
+    WB->>WS: POST /transfer
+    WS->>AL: Validate Transfer Details & Initiate Transfer
+    AL->>DB: Check Sender Balance & Log Pending Transaction
+    DB-->>AL: Balance OK & Transaction Logged
+    AL->>EBS: Initiate External Transfer (API Call)
+    EBS-->>AL: Transfer Confirmation/Status
+    AL->>DB: Update Transaction Status
+    DB-->>AL: Status Updated
+    AL-->>WS: Transfer Result
+    WS-->>WB: Send Transfer Confirmation/Error
+    WB->>U: Displays Transfer Status
+
+
+classDiagram
+    class User {
+        +String userID
+        +String username
+        +String password
+        +login()
+        +logout()
+    }
+
+    class Account {
+        +String accountID
+        +String accountNumber
+        +double balance
+        +String accountType
+        +deposit()
+        +withdraw()
+        +getBalance()
+    }
+
+    class Transaction {
+        +String transactionID
+        +String fromAccount
+        +String toAccount
+        +double amount
+        +DateTime timestamp
+        +String type
+        +recordTransaction()
+    }
+
+    User "1" -- "*" Account : has
+    Account "1" -- "*" Transaction : records
+
+TCD
+
+-------------------------------------
+
+Generating Test Cases for Login...
+
+--- Login Test Cases ---
+
+[
+  {
+    "Test Case ID": "TC_LOGIN_001",
+    "Feature": "Login",
+    "Test Objective": "Verify successful login with valid credentials.",
+    "Preconditions": "An active user account exists (e.g., Username: 'testuser', Password: 'Password123!').",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Enter 'testuser' in the Username field.\n3. Enter 'Password123!' in the Password field.\n4. Click the 'Login' button.",
+    "Expected Result": "User is successfully redirected to the account dashboard/summary page. A welcome message (e.g., 'Welcome, testuser!') is displayed."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_002",
+    "Feature": "Login",
+    "Test Objective": "Verify login failure with an invalid username.",
+    "Preconditions": "None.",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Enter a non-existent username (e.g., 'nonexistentuser') in the Username field.\n3. Enter any password (e.g., 'AnyPassword123') in the Password field.\n4. Click the 'Login' button.",
+    "Expected Result": "An error message 'Invalid username or password.' is displayed. User remains on the login page."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_003",
+    "Feature": "Login",
+    "Test Objective": "Verify login failure with an invalid password.",
+    "Preconditions": "An active user account exists (e.g., Username: 'testuser').",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Enter 'testuser' in the Username field.\n3. Enter an incorrect password (e.g., 'WrongPassword') in the Password field.\n4. Click the 'Login' button.",
+    "Expected Result": "An error message 'Invalid username or password.' is displayed. User remains on the login page."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_004",
+    "Feature": "Login",
+    "Test Objective": "Verify validation for an empty username field.",
+    "Preconditions": "None.",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Leave the Username field empty.\n3. Enter any password (e.g., 'AnyPassword123') in the Password field.\n4. Click the 'Login' button.",
+    "Expected Result": "A validation error message 'Username is required.' or 'Please enter your username.' is displayed next to the Username field. User remains on the login page."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_005",
+    "Feature": "Login",
+    "Test Objective": "Verify validation for an empty password field.",
+    "Preconditions": "None.",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Enter a valid username (e.g., 'testuser') in the Username field.\n3. Leave the Password field empty.\n4. Click the 'Login' button.",
+    "Expected Result": "A validation error message 'Password is required.' or 'Please enter your password.' is displayed next to the Password field. User remains on the login page."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_006",
+    "Feature": "Login",
+    "Test Objective": "Verify validation for both empty username and password fields.",
+    "Preconditions": "None.",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Leave both Username and Password fields empty.\n3. Click the 'Login' button.",
+    "Expected Result": "Validation error messages 'Username is required.' and 'Password is required.' are displayed. User remains on the login page."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_007",
+    "Feature": "Login",
+    "Test Objective": "Verify account locking mechanism after multiple failed login attempts.",
+    "Preconditions": "An active user account exists (e.g., Username: 'locktestuser'). System configured to lock account after N (e.g., 3) failed attempts.",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. For N consecutive times (e.g., 3 times):\n   a. Enter 'locktestuser' in the Username field.\n   b. Enter an incorrect password (e.g., 'WrongPass') in the Password field.\n   c. Click the 'Login' button.\n3. On the (N+1)th attempt, enter 'locktestuser' and the correct password ('CorrectPass123!').\n4. Click the 'Login' button.",
+    "Expected Result": "After N failed attempts, an error message 'Your account has been locked due to too many failed login attempts. Please contact support or use the 'Forgot Password' link.' is displayed. The user cannot log in even with correct credentials."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_008",
+    "Feature": "Login",
+    "Test Objective": "Verify login with a disabled/inactive account.",
+    "Preconditions": "A user account exists but is marked as disabled/inactive by an administrator (e.g., Username: 'disableduser', Password: 'DisabledPass123!').",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Enter 'disableduser' in the Username field.\n3. Enter 'DisabledPass123!' in the Password field.\n4. Click the 'Login' button.",
+    "Expected Result": "An error message 'Your account is inactive. Please contact support.' or 'Invalid username or password.' is displayed. User remains on the login page."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_009",
+    "Feature": "Login",
+    "Test Objective": "Verify username field is case-sensitive (if applicable, common for banking).",
+    "Preconditions": "An active user account exists with a mixed-case username (e.g., Username: 'UserTest', Password: 'Password123!').",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Enter 'usertest' (all lowercase) in the Username field.\n3. Enter 'Password123!' in the Password field.\n4. Click the 'Login' button.",
+    "Expected Result": "An error message 'Invalid username or password.' is displayed. User remains on the login page. (If the system is designed to be case-insensitive for usernames, then the expected result would be successful login)."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_010",
+    "Feature": "Login",
+    "Test Objective": "Verify password field is case-sensitive.",
+    "Preconditions": "An active user account exists with a mixed-case password (e.g., Username: 'testuser', Password: 'Password123!').",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Enter 'testuser' in the Username field.\n3. Enter 'password123!' (all lowercase) in the Password field.\n4. Click the 'Login' button.",
+    "Expected Result": "An error message 'Invalid username or password.' is displayed. User remains on the login page."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_011",
+    "Feature": "Login",
+    "Test Objective": "Verify system handles SQL Injection attempts in the username field.",
+    "Preconditions": "None.",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Enter `' OR '1'='1` in the Username field.\n3. Enter any password (e.g., 'dummy') in the Password field.\n4. Click the 'Login' button.",
+    "Expected Result": "Login fails. An error message 'Invalid username or password.' or a specific validation error is displayed. No unauthorized access or database errors occur."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_012",
+    "Feature": "Login",
+    "Test Objective": "Verify system handles XSS attempts in the username field.",
+    "Preconditions": "None.",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Enter `<script>alert('XSS')</script>` in the Username field.\n3. Enter any password (e.g., 'dummy') in the Password field.\n4. Click the 'Login' button.",
+    "Expected Result": "Login fails. No alert box or script execution occurs. The input is either sanitized, encoded, or rejected as invalid. An error message 'Invalid username or password.' is displayed."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_013",
+    "Feature": "Login",
+    "Test Objective": "Verify login with a username at the maximum allowed length.",
+    "Preconditions": "An active user account exists with a username at the maximum allowed length (e.g., 50 characters: 'averylongusernameforedgetestingpurposes12345').",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Enter the max-length username in the Username field.\n3. Enter the correct password in the Password field.\n4. Click the 'Login' button.",
+    "Expected Result": "User is successfully redirected to the account dashboard/summary page. The system handles the long username without issues."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_014",
+    "Feature": "Login",
+    "Test Objective": "Verify login with a password at the maximum allowed length.",
+    "Preconditions": "An active user account exists with a password at the maximum allowed length (e.g., 128 characters: 'P@ssw0rd!ThisIsAVeryLongPasswordForTestingTheMaximumAllowedLengthInTheSystemToEnsureItHandlesBoundaryValuesCorrectlyAndSecurely1234567890ABCDEF').",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Enter the correct username in the Username field.\n3. Enter the max-length password in the Password field.\n4. Click the 'Login' button.",
+    "Expected Result": "User is successfully redirected to the account dashboard/summary page. The system handles the long password without issues."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_015",
+    "Feature": "Login",
+    "Test Objective": "Verify 'Forgot Password' link navigates to the correct page.",
+    "Preconditions": "None.",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Locate and click the 'Forgot Password?' or 'Forgot Username?' link.",
+    "Expected Result": "User is redirected to the 'Password Recovery' or 'Forgot Username/Password' page, which typically asks for email/username for verification."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_016",
+    "Feature": "Login",
+    "Test Objective": "Verify behavior when attempting to use the browser's back button after logging out.",
+    "Preconditions": "An active user account exists.",
+    "Test Steps": "1. Log in successfully with valid credentials.\n2. Navigate to at least one internal page (e.g., 'Account Details').\n3. Click the 'Logout' button.\n4. After logging out, click the browser's 'Back' button.",
+    "Expected Result": "User is redirected to the login page or an error page indicating the session has expired/is invalid. The previous secure page content is not displayed."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_017",
+    "Feature": "Login",
+    "Test Objective": "Verify concurrent login behavior (e.g., session invalidation).",
+    "Preconditions": "An active user account exists (e.g., Username: 'concurrentuser', Password: 'ConcurrentPass123!').",
+    "Test Steps": "1. Open Browser A (e.g., Chrome) and log in with 'concurrentuser'.\n2. Open Browser B (e.g., Firefox or Incognito mode) and attempt to log in with 'concurrentuser'.\n3. After successful login in Browser B, return to Browser A and try to navigate to an internal page (e.g., 'Account Details').",
+    "Expected Result": "Login in Browser B is successful. The session in Browser A is invalidated, and attempting to navigate in Browser A redirects the user to the login page or displays a session expired message."
+  },
+  {
+    "Test Case ID": "TC_LOGIN_018",
+    "Feature": "Login",
+    "Test Objective": "Verify login behavior during a network interruption.",
+    "Preconditions": "An active user account exists.",
+    "Test Steps": "1. Navigate to the online banking login page.\n2. Enter valid username and password.\n3. Disable network connectivity (e.g., turn off Wi-Fi/Ethernet) immediately before or after clicking the 'Login' button.\n4. Observe the application's response.",
+    "Expected Result": "An appropriate error message related to network connectivity (e.g., 'Unable to connect to server', 'Network error', 'Please check your internet connection') is displayed. The application does not crash or freeze."
+  }
+]
+
+-------------------------
+
+Generating Test Cases for Fund Transfer...
+
+--- Fund Transfer Test Cases ---
+
+"| Test Case ID | Feature | Test Objective | Preconditions | Test Steps | Expected Result |\n|---|---|---|---|---|---|\n| FT_POS_001 | Fund Transfer | Verify successful immediate transfer between own accounts. | User is logged in. User has multiple active accounts (e.g., Savings, Checking) with sufficient balance in the source account. | 1. Navigate to 'Fund Transfer' section. <br> 2. Select 'Transfer to Own Accounts'. <br> 3. Select Source Account (e.g., Savings). <br> 4. Select Destination Account (e.g., Checking). <br> 5. Enter a valid transfer amount (e.g., $100). <br> 6. Add optional remarks. <br> 7. Click 'Transfer' / 'Confirm'. <br> 8. Enter OTP/MFA if prompted. | Funds are successfully transferred. <br> Source account balance decreases by the transfer amount. <br> Destination account balance increases by the transfer amount. <br> A success message is displayed. <br> Transaction appears in account statements/history for both accounts. |\n| FT_POS_002 | Fund Transfer | Verify successful immediate transfer to a registered payee (same bank). | User is logged in. User has sufficient balance. A registered payee (same bank) exists. | 1. Navigate to 'Fund Transfer' section. <br> 2. Select 'Transfer to Registered Payee'. <br> 3. Select Source Account. <br> 4. Select the registered payee (same bank). <br> 5. Enter a valid transfer amount (e.g., $500). <br> 6. Add optional remarks. <br> 7. Click 'Transfer' / 'Confirm'. <br> 8. Enter OTP/MFA if prompted. | Funds are successfully transferred. <br> Source account balance decreases. <br> Payee's account balance increases (if verifiable, otherwise system confirms success). <br> A success message is displayed. <br> Transaction appears in source account statement/history. |\n| FT_POS_003 | Fund Transfer | Verify successful immediate transfer to a new payee (different bank - IMPS/NEFT). | User is logged in. User has sufficient balance. | 1. Navigate to 'Fund Transfer' section. <br> 2. Select 'Transfer to New Payee'. <br> 3. Select Source Account. <br> 4. Enter New Payee details (Account Number, IFSC, Account Holder Name, Bank Name). <br> 5. Enter a valid transfer amount (e.g., $1500). <br> 6. Select transfer type (e.g., IMPS/NEFT). <br> 7. Add optional remarks. <br> 8. Click 'Transfer' / 'Confirm'. <br> 9. Enter OTP/MFA if prompted. | Funds are successfully transferred. <br> Source account balance decreases. <br> A success message is displayed. <br> Transaction appears in source account statement/history. <br> (Optional: Payee may be added to registered list after successful first transfer). |\n| FT_POS_004 | Fund Transfer | Verify successful scheduled future-dated transfer. | User is logged in. User has sufficient balance on the scheduled date. | 1. Navigate to 'Fund Transfer' section. <br> 2. Select 'Schedule Transfer'. <br> 3. Select Source Account. <br> 4. Select Destination (e.g., Registered Payee). <br> 5. Enter a valid transfer amount (e.g., $200). <br> 6. Select a future date (e.g., 5 days from current date). <br> 7. Add optional remarks. <br> 8. Click 'Schedule' / 'Confirm'. <br> 9. Enter OTP/MFA if prompted. | Transfer is successfully scheduled. <br> A confirmation message is displayed. <br> The scheduled transfer appears in 'Scheduled Transfers' section. <br> On the scheduled date, the transfer should execute, and balances should update accordingly. |\n| FT_POS_005 | Fund Transfer | Verify successful recurring transfer setup. | User is logged in. User has sufficient balance for initial transfer. | 1. Navigate to 'Fund Transfer' section. <br> 2. Select 'Recurring Transfer'. <br> 3. Select Source Account. <br> 4. Select Destination (e.g., Registered Payee). <br> 5. Enter a valid transfer amount (e.g., $100). <br> 6. Select frequency (e.g., Monthly). <br> 7. Select Start Date (e.g., next month's 1st). <br> 8. Select End Date (e.g., 6 months from start date). <br> 9. Add optional remarks. <br> 10. Click 'Schedule' / 'Confirm'. <br> 11. Enter OTP/MFA if prompted. | Recurring transfer is successfully set up. <br> A confirmation message is displayed. <br> The recurring transfer appears in 'Scheduled/Recurring Transfers' section. <br> Transfers should execute automatically on each scheduled date until the end date. |\n| FT_NEG_001 | Fund Transfer | Verify transfer failure due to insufficient funds. | User is logged in. Source account has insufficient balance for the requested transfer amount. | 1. Navigate to 'Fund Transfer' section. <br> 2. Select Source Account. <br> 3. Select Destination Account/Payee. <br> 4. Enter a transfer amount greater than the available balance. <br> 5. Click 'Transfer' / 'Confirm'. | System displays an error message: \"Insufficient Funds\" or similar. <br> Transfer is not processed. <br> Account balances remain unchanged. |\n| FT_NEG_002 | Fund Transfer | Verify transfer failure with invalid destination account number. | User is logged in. User has sufficient balance. | 1. Navigate to 'Fund Transfer' section. <br> 2. Select 'Transfer to New Payee'. <br> 3. Select Source Account. <br> 4. Enter an invalid destination account number (e.g., incorrect length, non-numeric characters, or a non-existent account format). <br> 5. Enter other valid payee details. <br> 6. Enter a valid transfer amount. <br> 7. Click 'Transfer' / 'Confirm'. | System displays an error message: \"Invalid Account Number\" or similar. <br> Transfer is not processed. <br> Account balances remain unchanged. |\n| FT_NEG_003 | Fund Transfer | Verify transfer failure with zero/negative amount. | User is logged in. User has sufficient balance. | 1. Navigate to 'Fund Transfer' section. <br> 2. Select Source Account. <br> 3. Select Destination Account/Payee. <br> 4. Enter '0' or a negative value (e.g., '-100') as the transfer amount. <br> 5. Click 'Transfer' / 'Confirm'. | System displays an error message: \"Amount cannot be zero\" or \"Invalid Amount\" or \"Amount must be positive\". <br> Transfer is not processed. <br> Account balances remain unchanged. |\n| FT_NEG_004 | Fund Transfer | Verify transfer failure when exceeding daily transaction limit. | User is logged in. User has sufficient balance. User has already made transfers close to the daily limit. | 1. Navigate to 'Fund Transfer' section. <br> 2. Select Source Account. <br> 3. Select Destination Account/Payee. <br> 4. Enter a transfer amount that, when added to today's previous transfers, exceeds the daily transaction limit. <br> 5. Click 'Transfer' / 'Confirm'. | System displays an error message: \"Daily transaction limit exceeded\" or similar. <br> Transfer is not processed. <br> Account balances remain unchanged. |\n| FT_NEG_005 | Fund Transfer | Verify transfer failure with incorrect OTP/MFA. | User is logged in. User has sufficient balance. | 1. Navigate to 'Fund Transfer' section. <br> 2. Initiate a transfer with valid details. <br> 3. When prompted for OTP/MFA, enter an incorrect code. <br> 4. Click 'Submit' / 'Verify'. | System displays an error message: \"Invalid OTP\" or \"Incorrect MFA code\". <br> Transfer is not processed. <br> Account balances remain unchanged. <br> (Optional: Account may be locked after multiple incorrect attempts). |\n| FT_NEG_006 | Fund Transfer | Verify scheduling a transfer for a past date. | User is logged in. | 1. Navigate to 'Fund Transfer' section. <br> 2. Select 'Schedule Transfer'. <br> 3. Select Source Account and Destination. <br> 4. Enter a valid transfer amount. <br> 5. Select a date in the past as the scheduled date. <br> 6. Click 'Schedule' / 'Confirm'. | System displays an error message: \"Scheduled date cannot be in the past\" or similar. <br> Transfer is not scheduled. |\n| FT_EDG_001 | Fund Transfer | Verify transfer of exact available balance. | User is logged in. Source account has a specific balance (e.g., $500). | 1. Navigate to 'Fund Transfer' section. <br> 2. Select Source Account. <br> 3. Select Destination Account/Payee. <br> 4. Enter the exact available balance as the transfer amount (e.g., $500). <br> 5. Click 'Transfer' / 'Confirm'. <br> 6. Enter OTP/MFA if prompted. | Funds are successfully transferred. <br> Source account balance becomes $0.00. <br> Destination account balance increases. <br> A success message is displayed. |\n| FT_EDG_002 | Fund Transfer | Verify transfer of minimum allowed amount. | User is logged in. Source account has sufficient balance. System has a defined minimum transfer amount (e.g., $1.00). | 1. Navigate to 'Fund Transfer' section. <br> 2. Select Source Account. <br> 3. Select Destination Account/Payee. <br> 4. Enter the minimum allowed transfer amount (e.g., $1.00). <br> 5. Click 'Transfer' / 'Confirm'. <br> 6. Enter OTP/MFA if prompted. | Funds are successfully transferred. <br> Balances are updated correctly. <br> A success message is displayed. |\n| FT_EDG_003 | Fund Transfer | Verify transfer of maximum allowed single transaction amount. | User is logged in. Source account has sufficient balance. System has a defined maximum single transaction limit (e.g., $25,000). | 1. Navigate to 'Fund Transfer' section. <br> 2. Select Source Account. <br> 3. Select Destination Account/Payee. <br> 4. Enter the maximum allowed single transaction amount (e.g., $25,000). <br> 5. Click 'Transfer' / 'Confirm'. <br> 6. Enter OTP/MFA if prompted. | Funds are successfully transferred. <br> Balances are updated correctly. <br> A success message is displayed. |\n| FT_EDG_004 | Fund Transfer | Verify transfer to a newly added payee (cooling period). | User is logged in. User has just added a new payee, and a cooling period (e.g., 30 minutes) is active for transfers to new payees. | 1. Add a new payee successfully. <br> 2. Immediately attempt to initiate a transfer to this newly added payee. <br> 3. Enter a valid transfer amount. <br> 4. Click 'Transfer' / 'Confirm'. | System displays an error message: \"Cooling period active for new payee. Please try again after [X] minutes/hours\" or similar. <br> Transfer is not processed. |\n| FT_EDG_005 | Fund Transfer | Verify concurrent transfers from the same account. | User is logged in. Source account has sufficient balance. | 1. Open two browser tabs/windows, logged into the same account. <br> 2. In Tab 1, initiate a transfer (e.g., $100) but do not confirm yet. <br> 3. In Tab 2, initiate another transfer (e.g., $100) from the same source account to a different destination and confirm it. <br> 4. Go back to Tab 1 and confirm the first transfer. | The first confirmed transfer (from Tab 2) should succeed. <br> The second transfer attempt (from Tab 1) should either: <br> a) Fail with \"Insufficient Funds\" if the balance is now too low. <br> b) Succeed if sufficient funds remain, and both transactions are processed correctly. <br> (System should handle concurrency gracefully, preventing overdrafts or double spending). |\n"
+
+------------------------------
